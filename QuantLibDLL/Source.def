@@ -1,0 +1,12 @@
+LIBRARY QLDLL
+EXPORTS
+  QLDLL_interpolate
+  QLDLL_interpolate1D
+  QLDLL_term2date
+  QLDLL_isHoliday
+  QLDLL_getHolidayList
+  QLDLL_getDayCount
+  QLDLL_getNextIMMdate
+  QLDLL_getNextIMMcode
+  QLDLL_createScheduleByTerminationDate
+  QLDLL_createScheduleByTerminationPeriod
