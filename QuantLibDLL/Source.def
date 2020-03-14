@@ -2,6 +2,7 @@ LIBRARY QLDLL
 EXPORTS
   QLDLL_interpolate
   QLDLL_interpolate1D
+  QLDLL_sortTerms
   QLDLL_term2date
   QLDLL_isHoliday
   QLDLL_getHolidayList

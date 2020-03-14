@@ -26,7 +26,10 @@
     <ClInclude Include="const.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="interpolator.h">
+    <ClInclude Include="interpolator.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="utilVBA.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

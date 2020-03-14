@@ -4,6 +4,8 @@
 #include <Windows.h>
 
 #include <algorithm>
+#include <codecvt>
+#include <locale>
 #include <vector>
 
 #include <ql/time/daycounter.hpp>
@@ -12,6 +14,7 @@
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include "const.hpp"
+#include "utilVBA.hpp"
 
 using namespace QuantLib;
 
@@ -20,14 +23,66 @@ std::vector<T> array2vector(T* array, const std::size_t size) {
     return std::vector<T>(array, array + size);
 }
 
-BSTR string2BSTR(const std::string& str) {
-    int strlen = ::MultiByteToWideChar(
-        CP_ACP, 0, str.data(), str.length(), NULL, 0);
+std::string str2safe(const std::string& str) {
+    std::string safeString(str);
+    safeString.erase(remove(safeString.begin(), safeString.end(), ' '), safeString.end());
+    return safeString;
+}
 
-    BSTR ret = ::SysAllocStringLen(NULL, strlen);
-    ::MultiByteToWideChar(
-        CP_ACP, 0, str.data(), str.length(), ret, strlen);
-    return ret;
+std::wstring vstring2wstring(const VARIANT& vstr) {
+    std::wstring ws;
+    if (vstr.vt == VT_BSTR) {
+        ws = std::wstring(vstr.bstrVal, SysStringLen(vstr.bstrVal));
+    } else if (vstr.vt == (VT_BSTR | VT_BYREF)) {
+        ws = std::wstring(*vstr.pbstrVal, SysStringLen(*vstr.pbstrVal));
+    }
+    return ws;
+}
+
+void wstring2vstring(const std::wstring& wstr, VARIANT& vstr) {
+    if (vstr.vt == VT_BSTR) {
+        vstr.vt = VT_BSTR;
+        vstr.bstrVal = SysAllocString(wstr.c_str());
+    } else if (vstr.vt == (VT_BSTR || VT_BYREF)) {
+        BSTR bs = SysAllocString(wstr.c_str());
+        SysReAllocString(vstr.pbstrVal, bs);
+        SysFreeString(bs);
+    }
+}
+
+std::wstring string2wstring(const std::string& str) {
+    using convert_typeX = std::codecvt_utf8<wchar_t>;
+    std::wstring_convert<convert_typeX, wchar_t> converterX;
+    return converterX.from_bytes(str);
+}
+
+std::string wstring2string(const std::wstring& wstr) {
+    using convert_typeX = std::codecvt_utf8<wchar_t>;
+    std::wstring_convert<convert_typeX, wchar_t> converterX;
+    return converterX.to_bytes(wstr);
+}
+
+
+BSTR string2BSTR(const std::string& str) {
+    BSTR bstr = SysAllocStringByteLen(str.c_str(), str.length());
+    return bstr;
+}
+
+std::wstring multiByteChar2wstring(const char* srcChar) {
+    if (!srcChar) {
+        return std::wstring(L"");
+    }
+
+    int bufferSize = MultiByteToWideChar(CP_ACP, 0, srcChar, -1, nullptr, 0);
+    wchar_t* pwsz = new wchar_t[bufferSize];
+    int iResult = MultiByteToWideChar(CP_ACP, 0, srcChar, -1, pwsz, bufferSize);
+    std::wstring ws(pwsz);
+    delete[] pwsz;
+    return ws;
+}
+
+std::wstring multiByteBSTR2wstring(const BSTR& bstr) {
+    return multiByteChar2wstring((const char*)bstr);
 }
 
 std::string str2upper(const std::string& str) {
@@ -36,10 +91,38 @@ std::string str2upper(const std::string& str) {
     return upperString;
 }
 
-std::string str2safe(const std::string& str) {
-    std::string safeString(str);
-    safeString.erase(remove(safeString.begin(), safeString.end(), ' '), safeString.end());
-    return safeString;
+template<typename T>
+void sort(std::vector<T>& vec) {
+    std::sort(vec.begin()(), vec.end());
+}
+
+std::string str2safeTermStr(const std::string& str) {
+    std::string safeStr = str2upper(str2safe(str));
+    if (safeStr == "TOD" || safeStr == "TODAY")
+        return std::string("0D");
+    else if (safeStr == QuantLibDLL::TERM_OVERNIGHT || safeStr == QuantLibDLL::TERM_OVERNIGHT_SUB)
+        return std::string("1D");
+    else if (safeStr == QuantLibDLL::TERM_TOMORROWNEXT || safeStr == QuantLibDLL::TERM_TOMORROWNEXT_SUB)
+        return std::string("2D");
+    else if (safeStr == QuantLibDLL::TERM_SPOTNEXT || safeStr == QuantLibDLL::TERM_SPOTNEXT_SUB)
+        return std::string("3D");
+    else if (safeStr == QuantLibDLL::TERM_SPOTWEEK || safeStr == QuantLibDLL::TERM_SPOTWEEK_SUB)
+        return std::string("1W2D");
+    else if (safeStr == "1.5Y")
+        return std::string("18M");
+    else if (safeStr == "1.75Y")
+        return std::string("21M");
+    return safeStr;
+}
+
+Period str2period(const std::string& str) {
+    std::string safeStr = str2upper(str2safe(str));
+    return PeriodParser::parse(str2safeTermStr(safeStr));
+}
+
+Period str2period(const char* str) {
+    std::string tmpStr(str);
+    return str2period(tmpStr);
 }
 
 DayCounter str2dayCounter(const std::string& str) {
@@ -135,25 +218,6 @@ JointCalendar str2jointCalendar(const char* str, const char* delim) {
     return str2jointCalendar(tmpStr, tmpStrDelim);
 }
 
-std::string str2safeTermStr(const std::string& str) {
-    std::string safeStr = str2upper(str2safe(str));
-    if (safeStr == "TOD" || safeStr == "TODAY")
-        return std::string("0D");
-    else if (safeStr == QuantLibDLL::TERM_OVERNIGHT || safeStr == QuantLibDLL::TERM_OVERNIGHT_SUB)
-        return std::string("1D");
-    else if (safeStr == QuantLibDLL::TERM_TOMORROWNEXT || safeStr == QuantLibDLL::TERM_TOMORROWNEXT_SUB)
-        return std::string("2D");
-    else if (safeStr == QuantLibDLL::TERM_SPOTNEXT || safeStr == QuantLibDLL::TERM_SPOTNEXT_SUB)
-        return std::string("3D");
-    else if (safeStr == QuantLibDLL::TERM_SPOTWEEK || safeStr == QuantLibDLL::TERM_SPOTWEEK_SUB)
-        return std::string("1W2D");
-    else if (safeStr == "1.5Y")
-        return std::string("18M");
-    else if (safeStr == "1.75Y")
-        return std::string("21M");
-    return safeStr;
-}
-
 BusinessDayConvention str2bdc(const std::string& str) {
     std::string safeStr = str2upper(str2safe(str));
     if (safeStr == QuantLibDLL::BDC_PRECEDING)
@@ -207,5 +271,47 @@ DateGeneration::Rule str2dateGeneration(const char* str) {
     std::string tmpStr(str);
     return str2dateGeneration(tmpStr);
 }
+
+void sortTerms(std::vector<std::string>& targetTerms) {
+    std::vector<std::pair<QuantLib::Date, std::string> > sortedGrids(targetTerms.size());
+    Calendar cal = UnitedKingdom();
+    QuantLib::Date today = QuantLib::Date::todaysDate();
+    for (size_t i = 0; i < targetTerms.size(); ++i) {
+        QuantLib::Date tmpDate = cal.advance(today, str2period(targetTerms[i]));
+        std::pair<QuantLib::Date, std::string> gridPair(tmpDate, targetTerms[i]);
+        sortedGrids[i] = gridPair;
+    }
+
+    std::sort(sortedGrids.begin(), sortedGrids.end());
+    for (size_t i = 0; i < targetTerms.size(); ++i) {
+        targetTerms[i] = sortedGrids[i].second;
+    }
+}
+
+void sortTerms(LPSAFEARRAY* targetTerms) {
+    LONG ubound = getSafeArrayUBound(targetTerms);
+    LONG lbound = getSafeArrayLBound(targetTerms);
+
+    std::vector<std::string> strVec(ubound - lbound + 1);
+
+    VARTYPE vt;
+    HRESULT hResult = SafeArrayGetVartype(*targetTerms, &vt);
+
+    for (LONG i = lbound; i <= ubound; ++i) {
+        BSTR bstr;
+        SafeArrayGetElement(*targetTerms, &i, &bstr);
+        strVec[i] = wstring2string(multiByteBSTR2wstring(bstr));
+        SysFreeString(bstr);
+    }
+    sortTerms(strVec);
+
+    for (LONG i = lbound; i <= ubound; ++i) {
+        BSTR bstr = SysAllocStringByteLen(strVec[i].c_str(), strVec[i].length());
+        SafeArrayPutElement(*targetTerms, &i, bstr);
+        SysFreeString(bstr);
+    }
+
+}
+
 
 #endif  // QUANTLIBDLL_UTIL_HPP

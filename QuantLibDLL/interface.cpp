@@ -1,15 +1,19 @@
 #include <ql/quantlib.hpp>
-#include "interpolator.h"
+#include "interpolator.hpp"
 #include "util.hpp"
 
 using namespace QuantLib;
 
 namespace QuantLibDLL {
+    void __stdcall QLDLL_sortTerms(LPSAFEARRAY* terms) {
+        sortTerms(terms);
+    }
+
     long __stdcall QLDLL_term2date(const long baseDate, const char* term, const char* cal, const char* delim, const char* convention) {
         try {
             const Calendar cal_ = str2jointCalendar(cal, delim);
             QuantLib::Date baseDate_ = cal_.adjust(QuantLib::Date(baseDate), str2bdc(convention));
-            return cal_.advance(baseDate_, PeriodParser::parse(str2safeTermStr(term))).serialNumber();
+            return cal_.advance(baseDate_, str2period(term)).serialNumber();
         } catch (std::exception e) {
             std::cerr << e.what() << std::endl;
             return RET_ERROR;
@@ -25,10 +29,10 @@ namespace QuantLibDLL {
             return static_cast<long>(cal_.isHoliday(QuantLib::Date(baseDate)));
         } catch (std::exception e) {
             std::cerr << e.what() << std::endl;
-            return 0;
+            return RET_ERROR;
         } catch (...) {
             std::cerr << "Unknown error was occurred." << std::endl;
-            return 0;
+            return RET_ERROR;
         }
     }
 
@@ -64,8 +68,6 @@ namespace QuantLibDLL {
         try {
             std::unique_ptr<IMM> imm;
             std::string tmpStr(imm->nextCode(static_cast<QuantLib::Date>(baseDate), static_cast<bool>(isMainCycle)));
-            // const char* tmpChar = tmpStr.c_str();
-            // return tmpChar;
             return string2BSTR(tmpStr);
         } catch (std::exception e) {
             std::cerr << e.what() << std::endl;
