@@ -274,10 +274,10 @@ DateGeneration::Rule str2dateGeneration(const char* str) {
 
 void sortTerms(std::vector<std::string>& targetTerms) {
     std::vector<std::pair<QuantLib::Date, std::string> > sortedGrids(targetTerms.size());
-    Calendar cal = UnitedKingdom();
-    QuantLib::Date today = QuantLib::Date::todaysDate();
+    Calendar cal = NullCalendar();
+    QuantLib::Date baseDate = cal.adjust(QuantLib::Date::todaysDate(), Following);
     for (size_t i = 0; i < targetTerms.size(); ++i) {
-        QuantLib::Date tmpDate = cal.advance(today, str2period(targetTerms[i]));
+        QuantLib::Date tmpDate = cal.advance(baseDate, str2period(targetTerms[i]));
         std::pair<QuantLib::Date, std::string> gridPair(tmpDate, targetTerms[i]);
         sortedGrids[i] = gridPair;
     }
