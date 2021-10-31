@@ -43,7 +43,7 @@ void wstring2vstring(const std::wstring& wstr, VARIANT& vstr) {
     if (vstr.vt == VT_BSTR) {
         vstr.vt = VT_BSTR;
         vstr.bstrVal = SysAllocString(wstr.c_str());
-    } else if (vstr.vt == (VT_BSTR || VT_BYREF)) {
+    } else if (vstr.vt == VT_BSTR || vstr.vt == VT_BYREF) {
         BSTR bs = SysAllocString(wstr.c_str());
         SysReAllocString(vstr.pbstrVal, bs);
         SysFreeString(bs);
@@ -139,6 +139,8 @@ DayCounter str2dayCounter(const std::string& str) {
         return Thirty360(Thirty360::EurobondBasis);
     else if (safeStr == "ACT/ACT" || safeStr == "ACTACT" || safeStr == "A/A" || safeStr == "ACTUAL/ACTUAL")
         return ActualActual(ActualActual::ISDA);
+    else if (safeStr == "BUS/252" || safeStr == "BUS252" || safeStr == "BUSINESS/252" || safeStr == "BUSINESS252")
+        return Business252();
     else
         return Actual365Fixed();
 }
