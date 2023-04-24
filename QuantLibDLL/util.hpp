@@ -141,6 +141,8 @@ DayCounter str2dayCounter(const std::string& str) {
         return ActualActual(ActualActual::ISDA);
     else if (safeStr == "BUS/252" || safeStr == "BUS252" || safeStr == "BUSINESS/252" || safeStr == "BUSINESS252")
         return Business252();
+    else if (safeStr == "BUS/252USD" || safeStr == "BUS252USD" || safeStr == "BUSINESS/252USD" || safeStr == "BUSINESS252USD")
+        return Business252(JointCalendar(Brazil(), UnitedStates(UnitedStates::Market::Settlement)));
     else
         return Actual365Fixed();
 }
@@ -157,7 +159,7 @@ Calendar str2calendar(const std::string& str) {
     else if (safeStr == "UNITEDKINGDOM" || safeStr == "UK" || safeStr == "LDN" || safeStr == "LONDON" || safeStr == "GBP" || safeStr == "STERLIN" || safeStr == "GBR" || safeStr == "GB")
         return UnitedKingdom();
     else if (safeStr == "UNITEDSTATES" || safeStr == "USA" || safeStr == "US" || safeStr == "NEWYORK" || safeStr == "NYK" || safeStr == "NY" || safeStr == "USD" || safeStr == "DOLLER")
-        return UnitedStates();
+        return UnitedStates(UnitedStates::Market::Settlement);
     else if (safeStr == "EUR" || safeStr == "EURO" || safeStr == "EU" || safeStr == "TARGET" || safeStr == "TAR")
         return TARGET();
     else if (safeStr == "AUSTRALIA" || safeStr == "AUD" || safeStr == "AUSSIE" || safeStr == "ADOLLER" || safeStr == "AU" || safeStr == "AUS")

@@ -196,4 +196,53 @@ namespace QuantLibDLL {
         }
     }
 
+    void __stdcall QLDLL_createIRSScheduleByTerminationPeriod(
+        long* fixedStartDate, long* fixedEndDate, long* fixedFixingDate, long* fixedPaymentDate,
+        long* floatingStartDate, long* floatingEndDate, long* floatingFixingDate, long* floatingPaymentDate,
+        const long outputDatesSize,
+        const long effectiveDate, const char* terminationPeriod,
+        double fixedRate,
+        const char* tenor, const char* calendar, const char* delim,
+        const char* convention, const char* terminationDateConvention,
+        const char* dateGeneration, const BOOL endOfMonth,
+        const long firstDate, const long nextToLastDate) {
+        try {
+            const long terminationDate = QuantLib::Date(
+                QLDLL_term2date(effectiveDate, terminationPeriod, calendar, delim, terminationDateConvention)).serialNumber();
+
+            // ext::shared_ptr<YieldTermStructure> forwardTS = ext::make_shared<FlatForward>(QuantLib::Date(effectiveDate), 0.0, Actual365Fixed());
+            // ext::shared_ptr<USDLibor> ibor = ext::make_shared<USDLibor>(PeriodParser::parse(str2safeTermStr(tenor)), Handle<YieldTermStructure>(forwardTS));
+            ext::shared_ptr<USDLibor> ibor = ext::make_shared<USDLibor>(PeriodParser::parse(str2safeTermStr(tenor)));
+            VanillaSwap swap(MakeVanillaSwap(
+                PeriodParser::parse(str2safeTermStr(terminationPeriod)),
+                ibor, fixedRate
+                ).withEffectiveDate(QuantLib::Date(effectiveDate)));
+
+            const Leg& fixedLeg = swap.fixedLeg();
+            const Leg& floatingLeg = swap.floatingLeg();
+            Date todaysDate = Settings::instance().evaluationDate();
+
+            for (size_t i = 0; i < fixedLeg.size(); ++i) {
+                ext::shared_ptr<FixedRateCoupon> coupon = ext::dynamic_pointer_cast<FixedRateCoupon>(fixedLeg[i]);
+                fixedStartDate[i] = coupon->accrualStartDate().serialNumber();
+                fixedEndDate[i] = coupon->accrualEndDate().serialNumber();
+                fixedFixingDate[i] = todaysDate.serialNumber();
+                fixedPaymentDate[i] = coupon->date().serialNumber();
+            }
+
+            for (size_t i = 0; i < floatingLeg.size(); ++i) {
+                ext::shared_ptr<FloatingRateCoupon> coupon = ext::dynamic_pointer_cast<FloatingRateCoupon>(floatingLeg[i]);
+                floatingStartDate[i] = coupon->accrualStartDate().serialNumber();
+                floatingEndDate[i] = coupon->accrualEndDate().serialNumber();
+                floatingFixingDate[i] = coupon->fixingDate().serialNumber();
+                floatingPaymentDate[i] = coupon->date().serialNumber();
+            }
+        }
+        catch (std::exception e) {
+            std::cerr << e.what() << std::endl;
+        }
+        catch (...) {
+            std::cerr << "Unknown error was occurred." << std::endl;
+        }
+    }
 }

@@ -1,4 +1,4 @@
-LIBRARY QLDLL
+LIBRARY QuantLibDLL
 EXPORTS
   QLDLL_interpolate
   QLDLL_interpolate1D
@@ -11,3 +11,4 @@ EXPORTS
   QLDLL_getNextIMMcode
   QLDLL_createScheduleByTerminationDate
   QLDLL_createScheduleByTerminationPeriod
+  QLDLL_createIRSScheduleByTerminationPeriod
